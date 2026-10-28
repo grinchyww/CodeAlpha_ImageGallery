@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Sheets | CodeAlpha</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Instrument+Sans:wght@400;500;600&family=Permanent+Marker&display=swap" rel="stylesheet">
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --dark: #170807;
+  --glow: rgba(205, 48, 28, 0.38);
+  --film: #1d1412;
+  --hole: #4a1a13;
+  --edge: #e0912f;
+  --wax: #f4d23c;
+  --text: #f2dcd4;
+  --muted: #b98c82;
+  --tape: #d8ccb0;
+  --table-ink: #26211d;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 50% -10%, var(--glow), transparent 60%),
+    var(--dark);
+}
+
+/* ---------- Header ---------- */
+.head {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 20px 12px;
+}
+
+.tape-label {
+  display: inline-block;
+  padding: 0.15em 0.7em 0.2em;
+  font-family: "Permanent Marker", cursive;
+  font-weight: 400;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  color: #1f1a17;
+  background: var(--tape);
+  transform: rotate(-2deg);
+  clip-path: polygon(0 6%, 3% 0, 97% 4%, 100% 0, 99% 94%, 96% 100%, 4% 96%, 1% 100%);
+}
+
+.intro {
+  margin-top: 18px;
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+.roll-btn {
+  padding: 7px 16px;
+  border: 1px solid rgba(242, 220, 212, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: 500 0.95rem "Instrument Sans", sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.roll-btn:hover { border-color: var(--text); }
+.roll-btn[aria-pressed="true"] { background: var(--text); color: var(--dark); border-color: var(--text); }
+.roll-btn:focus-visible { outline: 2px solid var(--wax); outline-offset: 3px; }
+
+.pick-count {
+  margin-top: 14px;
+  min-height: 1.4em;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* ---------- Contact sheet ---------- */
+.sheet {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 20px 64px;
+}
+
+.roll + .roll { margin-top: 44px; }
+
+.roll-label {
+  margin-bottom: 14px;
+  font-family: "Permanent Marker", cursive;
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: var(--text);
+  transform: rotate(-1deg);
+}
+
+.strip-scroll {
+  overflow-x: auto;
+  padding: 0 0 12px;
+  scrollbar-color: var(--hole) transparent;
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  padding: 34px 16px 26px;
+  list-style: none;
+  background: var(--film);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+/* sprocket holes */
+.strip::before,
+.strip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: repeating-linear-gradient(90deg, transparent 0 7px, var(--hole) 7px 16px, transparent 16px 22px);
+}
+.strip::before { top: 7px; }
+.strip::after { bottom: 7px; }
+
+.frame {
+  position: relative;
+  display: block;
+  width: clamp(160px, 22vw, 230px);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+.neg {
+  display: block;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: #000;
+}
+.neg img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(0.9) brightness(0.92);
+  transition: filter 0.3s;
+}
+.frame:hover .neg img,
+.frame:focus-visible .neg img { filter: saturate(1) brightness(1.08); }
+
+.edge {
+  position: absolute;
+  top: -19px;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  justify-content: space-between;
+  font: 500 0.68rem "IBM Plex Mono", monospace;
+  color: var(--edge);
+  opacity: 0.85;
+}
+
+/* grease-pencil circle */
+.wax {
+  position: absolute;
+  inset: -12px -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 24px);
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.wax path {
+  fill: none;
+  stroke: var(--wax);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.55s ease-out;
+}
+.frame:hover .wax,
+.frame:focus-visible .wax { opacity: 0.6; }
+.frame:hover .wax path,
+.frame:focus-visible .wax path { stroke-dashoffset: 0; }
+.frame.picked .wax { opacity: 1; }
+.frame.picked .wax path { stroke-dashoffset: 0; }
+.frame:focus-visible { outline: 2px dashed var(--wax); outline-offset: 16px; }
+
+/* ---------- Light table ---------- */
+.table {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  padding: 16px clamp(12px, 3vw, 32px) 18px;
+  color: var(--table-ink);
+  background: radial-gradient(circle at 50% 42%, #ffffff, #eeece6 65%, #dcd8ce);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+.table.open { opacity: 1; visibility: visible; }
+.table.flicker { animation: flicker 0.7s linear; }
+
+@keyframes flicker {
+  0%   { opacity: 0; }
+  12%  { opacity: 0.85; }
+  18%  { opacity: 0.15; }
+  30%  { opacity: 1; }
+  36%  { opacity: 0.55; }
+  48%, 100% { opacity: 1; }
+}
+
+.table-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.print-title { font-weight: 600; font-size: 1.1rem; }
+.print-title span { margin-left: 10px; font-weight: 400; font-size: 0.9rem; color: #7a7064; }
+
+.table-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.table-actions button,
+.toning button {
+  padding: 7px 15px;
+  border: 1px solid #bdb6a8;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--table-ink);
+  font: 500 0.9rem "Instrument Sans", sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.table-actions button:hover,
+.toning button:hover { border-color: var(--table-ink); }
+#loupeBtn[aria-pressed="true"],
+.toning button[aria-pressed="true"] { background: var(--table-ink); color: #fff; border-color: var(--table-ink); }
+#pickBtn[aria-pressed="true"] { background: var(--wax); border-color: #c4a516; }
+.table button:focus-visible { outline: 2px solid #b0301e; outline-offset: 2px; }
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 20px);
+  min-height: 0;
+}
+
+.print {
+  position: relative;
+  margin: 0;
+  padding: clamp(8px, 1.4vw, 16px);
+  min-width: 0;
+  background: #fff;
+  line-height: 0;
+  box-shadow: 0 20px 44px rgba(70, 58, 44, 0.28), 0 2px 6px rgba(70, 58, 44, 0.2);
+}
+.print img {
+  display: block;
+  width: min(1000px, calc((100vh - 290px) * 1.5), 76vw);
+  aspect-ratio: 3 / 2;
+  height: auto;
+  object-fit: cover;
+  background: #e2ded5;
+  filter: var(--tone, none);
+  cursor: crosshair;
+}
+
+.developer {
+  position: absolute;
+  inset: clamp(8px, 1.4vw, 16px);
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.print.developing .developer { animation: develop 1.2s ease-out forwards; }
+@keyframes develop { from { opacity: 0.94; } to { opacity: 0; } }
+
+.loupe {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  border: 6px solid #2b2724;
+  background-repeat: no-repeat;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.loupe.show { opacity: 1; }
+
+.nav {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #bdb6a8;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--table-ink);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.nav:hover { border-color: var(--table-ink); }
+
+.toning { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+.mini {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 8px;
+  overflow-x: auto;
+  background: var(--film);
+}
+.mini button {
+  flex: none;
+  width: 66px;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: none;
+  background: #000;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.mini button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mini button:hover { opacity: 0.85; }
+.mini button[aria-current="true"] { opacity: 1; outline: 2px solid var(--wax); outline-offset: 1px; }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 640px) {
+  .head { padding-top: 32px; }
+  .stage { position: relative; }
+  .nav { position: absolute; bottom: -8px; width: 40px; height: 40px; font-size: 1.4rem; }
+  #prevFrame { left: 0; }
+  #nextFrame { right: 0; }
+  .print img { width: min(calc(100vw - 48px), calc((100vh - 340px) * 1.5)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+  <header class="head">
+    <h1 class="tape-label">Contact sheets</h1>
+    <p class="intro">Pick a frame to view it on the light table.</p>
+    <nav class="rolls" id="rollFilter" aria-label="Filter by roll">
+      <button class="roll-btn" data-filter="all" aria-pressed="true">All rolls</button>
+      <button class="roll-btn" data-filter="nature" aria-pressed="false">Landscapes</button>
+      <button class="roll-btn" data-filter="city" aria-pressed="false">City</button>
+      <button class="roll-btn" data-filter="animals" aria-pressed="false">Animals</button>
+    </nav>
+    <p class="pick-count" id="pickCount" aria-live="polite"></p>
+  </header>
+
+  <main class="sheet" id="sheet"></main>
+
+  <!-- Light table (lightbox) -->
+  <div class="table" id="table" role="dialog" aria-modal="true" aria-labelledby="printTitle" aria-hidden="true">
+    <div class="table-bar">
+      <p class="print-title" id="printTitle"></p>
+      <div class="table-actions">
+        <button id="pickBtn" aria-pressed="false">Mark as pick</button>
+        <button id="loupeBtn" aria-pressed="true">Loupe</button>
+        <button id="closeTable">Close</button>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <button class="nav" id="prevFrame" aria-label="Previous frame">‹</button>
+      <figure class="print" id="print">
+        <img id="printImg" alt="">
+        <div class="developer" aria-hidden="true"></div>
+        <div class="loupe" id="loupe" aria-hidden="true"></div>
+      </figure>
+      <button class="nav" id="nextFrame" aria-label="Next frame">›</button>
+    </div>
+
+    <div class="toning" id="toning" role="group" aria-label="Print toning">
+      <button data-tone="none" aria-pressed="true">Untoned</button>
+      <button data-tone="grayscale(1) contrast(1.15)" aria-pressed="false">Selenium</button>
+      <button data-tone="sepia(0.85) contrast(1.05)" aria-pressed="false">Sepia</button>
+      <button data-tone="grayscale(1) sepia(1) hue-rotate(170deg) saturate(2.2) brightness(0.95)" aria-pressed="false">Cyanotype</button>
+    </div>
+
+    <div class="mini" id="mini" aria-label="Frames on this sheet"></div>
+  </div>
+
+  <script>
+// Contact Sheets — CodeAlpha Frontend Task 1
+// A darkroom-style image gallery: film strips, grease-pencil picks,
+// and a light table with a loupe. Photos come from picsum.photos.
+
+const ROLLS = [
+  {
+    key: 'nature', name: 'Landscapes', frames: [
+      { id: 1015, title: 'River valley' },
+      { id: 1018, title: 'Mountain ridge' },
+      { id: 1016, title: 'Canyon walls' },
+      { id: 1036, title: 'Winter forest' },
+    ],
+  },
+  {
+    key: 'city', name: 'City', frames: [
+      { id: 1031, title: 'Tall buildings' },
+      { id: 1067, title: 'City street' },
+      { id: 1044, title: 'Evening light' },
+      { id: 1076, title: 'Downtown' },
+    ],
+  },
+  {
+    key: 'animals', name: 'Animals', frames: [
+      { id: 1025, title: 'Pug in a blanket' },
+      { id: 1024, title: 'Watchful bird' },
+      { id: 1074, title: 'Resting lion' },
+      { id: 237, title: 'Puppy' },
+    ],
+  },
+];
+
+const imgUrl = (id, w, h) => `https://picsum.photos/id/${id}/${w}/${h}`;
+
+// Flatten into one list of photos with roll + frame numbers
+const ALL = ROLLS.flatMap((roll, r) =>
+  roll.frames.map((f, i) => ({ ...f, roll: roll.key, rollName: roll.name, rollNo: r + 1, frameNo: i + 1 }))
+);
+
+const $ = id => document.getElementById(id);
+const sheet = $('sheet');
+const filterNav = $('rollFilter');
+const pickCount = $('pickCount');
+const table = $('table');
+const printFig = $('print');
+const printImg = $('printImg');
+const printTitle = $('printTitle');
+const loupe = $('loupe');
+const loupeBtn = $('loupeBtn');
+const pickBtn = $('pickBtn');
+const mini = $('mini');
+const toning = $('toning');
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+
+let visible = [...ALL];
+let current = 0;
+let loupeOn = !coarsePointer;
+let lastFocus = null;
+
+/* ---------- Picks (saved in the browser) ---------- */
+let picks = new Set();
+try { picks = new Set(JSON.parse(localStorage.getItem('contact-sheet-picks') || '[]')); } catch { /* storage blocked */ }
+
+function savePicks() {
+  try { localStorage.setItem('contact-sheet-picks', JSON.stringify([...picks])); } catch { /* storage blocked */ }
+  updatePickCount();
+}
+
+function updatePickCount() {
+  const n = picks.size;
+  pickCount.textContent = n === 0
+    ? 'No picks yet. Open a frame and mark the ones you like.'
+    : `${n} ${n === 1 ? 'frame' : 'frames'} circled as picks.`;
+}
+
+/* ---------- Contact sheet ---------- */
+const WAX = `<svg class="wax" viewBox="0 0 100 66" preserveAspectRatio="none" aria-hidden="true">
+  <path pathLength="1" d="M52 5 C 82 3, 97 17, 95 34 C 93 55, 70 63, 46 62 C 19 61, 3 49, 5 31 C 7 14, 27 5, 60 7"/>
+</svg>`;
+
+function renderSheet(filter = 'all') {
+  visible = filter === 'all' ? [...ALL] : ALL.filter(p => p.roll === filter);
+  sheet.innerHTML = '';
+
+  ROLLS.forEach((roll, r) => {
+    if (filter !== 'all' && roll.key !== filter) return;
+
+    const section = document.createElement('section');
+    section.className = 'roll';
+    const label = document.createElement('h2');
+    label.className = 'roll-label';
+    label.textContent = `Roll ${r + 1}: ${roll.name}`;
+
+    const scroller = document.createElement('div');
+    scroller.className = 'strip-scroll';
+    const strip = document.createElement('ul');
+    strip.className = 'strip';
+
+    ALL.filter(p => p.roll === roll.key).forEach(photo => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'frame' + (picks.has(photo.id) ? ' picked' : '');
+      btn.dataset.id = photo.id;
+      btn.setAttribute('aria-label', `${photo.title}, roll ${photo.rollNo} frame ${photo.frameNo}`);
+      btn.innerHTML = `
+        <span class="edge" aria-hidden="true"><span>▸${photo.frameNo}</span><span>${photo.frameNo}A</span></span>
+        <span class="neg"><img src="${imgUrl(photo.id, 480, 320)}" alt="" loading="lazy"></span>
+        ${WAX}`;
+      btn.addEventListener('click', () => openTable(visible.indexOf(photo), btn));
+      li.appendChild(btn);
+      strip.appendChild(li);
+    });
+
+    scroller.appendChild(strip);
+    section.append(label, scroller);
+    sheet.appendChild(section);
+  });
+}
+
+filterNav.addEventListener('click', e => {
+  const btn = e.target.closest('.roll-btn');
+  if (!btn) return;
+  filterNav.querySelectorAll('.roll-btn').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  renderSheet(btn.dataset.filter);
+});
+
+/* ---------- Light table ---------- */
+function renderMini() {
+  mini.innerHTML = '';
+  visible.forEach((photo, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', photo.title);
+    b.innerHTML = `<img src="${imgUrl(photo.id, 132, 88)}" alt="" loading="lazy">`;
+    b.addEventListener('click', () => showFrame(i));
+    mini.appendChild(b);
+  });
+}
+
+function showFrame(i) {
+  current = (i + visible.length) % visible.length;
+  const photo = visible[current];
+
+  // "Develop" the print each time it changes
+  printFig.classList.remove('developing');
+  void printFig.offsetWidth;
+  if (!reduceMotion) printFig.classList.add('developing');
+
+  printImg.src = imgUrl(photo.id, 1500, 1000);
+  printImg.alt = photo.title;
+  loupe.style.backgroundImage = `url("${printImg.src}")`;
+
+  printTitle.textContent = photo.title;
+  const sub = document.createElement('span');
+  sub.textContent = `Roll ${photo.rollNo}, frame ${photo.frameNo}`;
+  printTitle.appendChild(sub);
+
+  const picked = picks.has(photo.id);
+  pickBtn.setAttribute('aria-pressed', String(picked));
+  pickBtn.textContent = picked ? 'Picked' : 'Mark as pick';
+
+  [...mini.children].forEach((b, j) => {
+    b.setAttribute('aria-current', String(j === current));
+    if (j === current) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+}
+
+function openTable(i, opener) {
+  lastFocus = opener || document.activeElement;
+  renderMini();
+  showFrame(i);
+  table.classList.add('open');
+  table.setAttribute('aria-hidden', 'false');
+  if (!reduceMotion) {
+    table.classList.remove('flicker');
+    void table.offsetWidth;
+    table.classList.add('flicker');
+  }
+  document.body.style.overflow = 'hidden';
+  $('closeTable').focus();
+}
+
+function closeTable() {
+  table.classList.remove('open', 'flicker');
+  table.setAttribute('aria-hidden', 'true');
+  loupe.classList.remove('show');
+  document.body.style.overflow = '';
+  if (lastFocus) lastFocus.focus();
+}
+
+const nextFrame = () => showFrame(current + 1);
+const prevFrame = () => showFrame(current - 1);
+
+$('nextFrame').addEventListener('click', nextFrame);
+$('prevFrame').addEventListener('click', prevFrame);
+$('closeTable').addEventListener('click', closeTable);
+
+/* ---------- Picks ---------- */
+function togglePick() {
+  const photo = visible[current];
+  if (picks.has(photo.id)) picks.delete(photo.id);
+  else picks.add(photo.id);
+  savePicks();
+  showFrame(current);
+  const frameBtn = sheet.querySelector(`.frame[data-id="${photo.id}"]`);
+  if (frameBtn) frameBtn.classList.toggle('picked', picks.has(photo.id));
+}
+pickBtn.addEventListener('click', togglePick);
+
+/* ---------- Loupe ---------- */
+const ZOOM = 2.6;
+
+function setLoupe(on) {
+  loupeOn = on;
+  loupeBtn.setAttribute('aria-pressed', String(on));
+  if (!on) loupe.classList.remove('show');
+  printImg.style.cursor = on ? 'crosshair' : 'default';
+}
+
+if (coarsePointer) loupeBtn.hidden = true;
+loupeBtn.addEventListener('click', () => setLoupe(!loupeOn));
+
+printImg.addEventListener('pointermove', e => {
+  if (!loupeOn || e.pointerType === 'touch') return;
+  const img = printImg.getBoundingClientRect();
+  const fig = printFig.getBoundingClientRect();
+  const x = e.clientX - img.left;
+  const y = e.clientY - img.top;
+  const r = loupe.clientWidth / 2;
+
+  loupe.style.left = `${e.clientX - fig.left}px`;
+  loupe.style.top = `${e.clientY - fig.top}px`;
+  loupe.style.backgroundSize = `${img.width * ZOOM}px ${img.height * ZOOM}px`;
+  loupe.style.backgroundPosition = `${-(x * ZOOM - r)}px ${-(y * ZOOM - r)}px`;
+  loupe.classList.add('show');
+});
+printImg.addEventListener('pointerleave', () => loupe.classList.remove('show'));
+
+/* ---------- Toning (image filters) ---------- */
+toning.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  toning.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  printFig.style.setProperty('--tone', btn.dataset.tone);
+  loupe.style.filter = btn.dataset.tone;
+});
+
+/* ---------- Keyboard, swipe, focus ---------- */
+document.addEventListener('keydown', e => {
+  if (!table.classList.contains('open')) return;
+  if (e.key === 'ArrowRight') nextFrame();
+  else if (e.key === 'ArrowLeft') prevFrame();
+  else if (e.key === 'Escape') closeTable();
+  else if (e.key === 'p' || e.key === 'P') togglePick();
+  else if ((e.key === 'l' || e.key === 'L') && !coarsePointer) setLoupe(!loupeOn);
+  else if (e.key === 'Tab') {
+    // keep focus inside the light table
+    const focusable = [...table.querySelectorAll('button:not([hidden])')];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+
+let touchX = 0;
+const stage = $('stage');
+stage.addEventListener('touchstart', e => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+stage.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) (dx < 0 ? nextFrame : prevFrame)();
+});
+
+/* ---------- Start ---------- */
+setLoupe(loupeOn);
+updatePickCount();
+renderSheet();
+</script>
+</body>
+</html>
